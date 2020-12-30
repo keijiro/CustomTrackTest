@@ -15,9 +15,32 @@ namespace Klak.Timeline
     [TrackBindingType(typeof(Transform))]
     public class ProceduralMotionTrack : TrackAsset
     {
+        [SerializeField]
+        bool animateRelativeToInitialPosition = true;
+
         public override Playable CreateTrackMixer(PlayableGraph graph, GameObject go, int inputCount)
         {
-            return ScriptPlayable<ProceduralMotionMixer>.Create(graph, inputCount);
+            var transform = go.GetComponent<PlayableDirector>().GetGenericBinding(this) as Transform;
+
+            if (transform == null)
+                return Playable.Null;
+
+            var playable = ScriptPlayable<ProceduralMotionMixer>.Create(graph, inputCount);
+            var behaviour = playable.GetBehaviour();
+
+            if (animateRelativeToInitialPosition)
+            {
+                // Remember object's initial position and rotation.
+                behaviour.InitialPosition = transform.position;
+                behaviour.InitialRotation = transform.rotation;
+            }
+            else
+            {
+                behaviour.InitialPosition = Vector3.zero;
+                behaviour.InitialRotation = Quaternion.identity;
+            }
+
+            return playable;
         }
 
         public override void GatherProperties(PlayableDirector director, IPropertyCollector driver)
@@ -25,13 +48,12 @@ namespace Klak.Timeline
             var transform = director.GetGenericBinding(this) as Transform;
             if (transform == null) return;
 
-            var go = transform.gameObject;
-            driver.AddFromName<Transform>(go, "m_LocalPosition.x");
-            driver.AddFromName<Transform>(go, "m_LocalPosition.y");
-            driver.AddFromName<Transform>(go, "m_LocalPosition.z");
-            driver.AddFromName<Transform>(go, "m_LocalRotation.x");
-            driver.AddFromName<Transform>(go, "m_LocalRotation.y");
-            driver.AddFromName<Transform>(go, "m_LocalRotation.z");
+            driver.AddFromName(transform, "m_LocalPosition.x");
+            driver.AddFromName(transform, "m_LocalPosition.y");
+            driver.AddFromName(transform, "m_LocalPosition.z");
+            driver.AddFromName(transform, "m_LocalRotation.x");
+            driver.AddFromName(transform, "m_LocalRotation.y");
+            driver.AddFromName(transform, "m_LocalRotation.z");
         }
     }
 }
